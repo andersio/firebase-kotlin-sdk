@@ -73,11 +73,12 @@ kotlin {
     val iosX64 = iosX64("ios") {
         binaries {
             getTest("DEBUG").apply {
-                linkerOpts("-F${rootProject.buildDir}/Firebase/FirebaseAnalytics")
+                val testDeps = listOf("GTMSessionFetcher", "FirebaseCore", "GoogleUtilities")
+                testDeps.forEach { linkerOpts("-framework", it) }
+
                 linkerOpts("-F${rootProject.buildDir}/Firebase/FirebaseAuth")
-                linkerOpts("-F${rootProject.buildDir}/Firebase/GoogleSignIn")
+                linkerOpts("-F${rootProject.buildDir}/Firebase/FirebaseAnalytics")
                 linkerOpts("-ObjC")
-//                compilerOpts("-framework AppAuth")
             }
         }
     }
