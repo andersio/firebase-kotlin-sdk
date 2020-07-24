@@ -57,8 +57,8 @@ subprojects {
 
     group = "dev.gitlive"
 
-    apply(plugin="com.adarshr.test-logger")
-    
+    apply(plugin = "com.adarshr.test-logger")
+
     repositories {
         mavenLocal()
         mavenCentral()
@@ -68,10 +68,11 @@ subprojects {
 
 
     tasks.withType<Sign>().configureEach {
-        onlyIf { !project.gradle.startParameter.taskNames.contains("publishToMavenLocal")
-            }
+        onlyIf {
+            !project.gradle.startParameter.taskNames.contains("publishToMavenLocal")
+        }
     }
-    
+
 
     tasks {
 
@@ -123,7 +124,7 @@ subprojects {
         val publishToNpm by creating(Exec::class) {
             workingDir("$buildDir/node_module")
             isIgnoreExitValue = true
-            if(Os.isFamily(Os.FAMILY_WINDOWS)) {
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
                 commandLine("cmd", "/c", "npm publish")
             } else {
                 commandLine("npm", "publish")
@@ -157,18 +158,45 @@ subprojects {
 //        )
 //    }
 
-    afterEvaluate  {
+    afterEvaluate {
         // create the projects node_modules if they don't exist
-        if(!File("$buildDir/node_module").exists()) {
+        if (!File("$buildDir/node_module").exists()) {
             mkdir("$buildDir/node_module")
         }
 
-        if(Os.isFamily(Os.FAMILY_MAC)) {
+        if (Os.isFamily(Os.FAMILY_MAC)) {
             tasks.getByPath("compileKotlinIos").dependsOn(rootProject.tasks.named("unzipIOSFirebase"))
         } else {
             println("Skipping Firebase zip download")
         }
 
+        tasks
+            .withType(org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink::class)
+            .filter { it.binary.outputKind == org.jetbrains.kotlin.gradle.plugin.mpp.NativeOutputKind.TEST }
+            .forEach { linkTask ->
+                linkTask.binary.apply {
+                    val testDeps = listOf(
+                        "FirebaseCore", "GoogleUtilities", "nanopb",
+                        "FirebaseAuth", "GTMSessionFetcher",
+                        "FirebaseFirestore", "abseil", "gRPC-C++", "gRPC-Core", "leveldb-library", "BoringSSL-GRPC",
+                        "FirebaseDatabase",
+                        "FirebaseFunctions"
+                    )
+
+                    val binaryPaths = listOf(
+                        "Firebase/FirebaseAnalytics",
+                        "Firebase/FirebaseAuth",
+                        "Firebase/FirebaseFirestore",
+                        "Firebase/FirebaseDatabase",
+                        "Firebase/FirebaseFunctions"
+                    )
+
+                    testDeps.forEach { linkerOpts("-framework", it) }
+                    binaryPaths.forEach { linkerOpts("-F${rootProject.buildDir}/$it") }
+
+                    linkerOpts("-ObjC")
+                }
+            }
 
         dependencies {
             "commonMainImplementation"(kotlin("stdlib-common"))
@@ -193,8 +221,8 @@ subprojects {
         }
     }
 
-    apply(plugin="maven-publish")
-    apply(plugin="signing")
+    apply(plugin = "maven-publish")
+    apply(plugin = "signing")
 
 
     configure<PublishingExtension> {

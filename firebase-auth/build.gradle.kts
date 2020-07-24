@@ -70,18 +70,7 @@ kotlin {
         publishLibraryVariants("release", "debug")
     }
     val iosArm64 = iosArm64()
-    val iosX64 = iosX64("ios") {
-        binaries {
-            getTest("DEBUG").apply {
-                val testDeps = listOf("GTMSessionFetcher", "FirebaseCore", "GoogleUtilities")
-                testDeps.forEach { linkerOpts("-framework", it) }
-
-                linkerOpts("-F${rootProject.buildDir}/Firebase/FirebaseAuth")
-                linkerOpts("-F${rootProject.buildDir}/Firebase/FirebaseAnalytics")
-                linkerOpts("-ObjC")
-            }
-        }
-    }
+    val iosX64 = iosX64("ios")
 
     tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
         kotlinOptions.freeCompilerArgs += listOf(

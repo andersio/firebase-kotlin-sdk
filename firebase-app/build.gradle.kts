@@ -64,18 +64,7 @@ kotlin {
     }
 
     val iosArm64 = iosArm64()
-    val iosX64 = iosX64("ios") {
-        binaries {
-            getTest("DEBUG").apply {
-                val testDeps = listOf("GoogleUtilities")
-                testDeps.forEach { linkerOpts("-framework", it) }
-
-                linkerOpts("-F${rootProject.buildDir}/Firebase/FirebaseAnalytics")
-                linkerOpts("-ObjC")
-
-            }
-        }
-    }
+    val iosX64 = iosX64("ios")
 
     sourceSets {
         val commonMain by getting {
