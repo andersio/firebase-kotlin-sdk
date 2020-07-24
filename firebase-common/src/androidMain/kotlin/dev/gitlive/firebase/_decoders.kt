@@ -9,14 +9,45 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.StructureKind
 
-actual fun FirebaseDecoder.structureDecoder(descriptor: SerialDescriptor, vararg typeParams: KSerializer<*>): CompositeDecoder = when(descriptor.kind as StructureKind) {
-        StructureKind.CLASS, StructureKind.OBJECT -> (value as Map<*, *>).let { map ->
-            FirebaseClassDecoder(map.size, { map.containsKey(it) }) { desc, index -> map[desc.getElementName(index)] }
-        }
-        StructureKind.LIST -> (value as List<*>).let {
-            FirebaseCompositeDecoder(it.size) { _, index -> it[index] }
-        }
-        StructureKind.MAP -> (value as Map<*, *>).entries.toList().let {
-            FirebaseCompositeDecoder(it.size) { _, index -> it[index/2].run { if(index % 2 == 0) key else value }  }
+private val timestampQualifiedName = "com.google.firebase.Timestamp"
+
+actual fun FirebaseDecoder.structureDecoder(
+    descriptor: SerialDescriptor,
+    vararg typeParams: KSerializer<*>
+): CompositeDecoder = when (descriptor.kind as StructureKind) {
+    StructureKind.CLASS, StructureKind.OBJECT ->
+        if (value is Map<*, *>)
+            FirebaseClassDecoder(
+                value.size,
+                { value.containsKey(it) }) { desc, index -> value[desc.getElementName(index)] }
+        else if (value != null && value::class.qualifiedName == timestampQualifiedName)
+            makeJavaReflectionDecoder(value)
+        else
+            FirebaseEmptyCompositeDecoder()
+    StructureKind.LIST -> (value as List<*>).let {
+        FirebaseCompositeDecoder(it.size) { _, index -> it[index] }
+    }
+    StructureKind.MAP -> (value as Map<*, *>).entries.toList().let {
+        FirebaseCompositeDecoder(it.size) { _, index -> it[index / 2].run { if (index % 2 == 0) key else value } }
+    }
+}
+
+private val timestampKeys = setOf("seconds", "nanoseconds")
+
+private fun makeJavaReflectionDecoder(jvmObj: Any): CompositeDecoder {
+    val timestampClass = Class.forName(timestampQualifiedName)
+    val getSeconds = timestampClass.getMethod("getSeconds")
+    val getNanoseconds = timestampClass.getMethod("getNanoseconds")
+
+    return FirebaseClassDecoder(
+        size = 2,
+        containsKey = { timestampKeys.contains(it) }
+    ) { descriptor, index ->
+        when (descriptor.getElementName(index)) {
+            "seconds" -> getSeconds.invoke(jvmObj) as Long
+            "nanoseconds" -> getNanoseconds.invoke(jvmObj) as Int
+            else -> null
         }
     }
+}
+

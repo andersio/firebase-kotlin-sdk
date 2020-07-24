@@ -22,6 +22,7 @@ buildscript {
         classpath("com.android.tools.build:gradle:3.6.1")
         classpath("de.undercouch:gradle-download-task:4.0.4")
         classpath("com.adarshr:gradle-test-logger-plugin:2.0.0")
+        classpath("org.jetbrains.kotlin:kotlin-serialization:1.3.71")
     }
 }
 
@@ -169,6 +170,33 @@ subprojects {
             println("Skipping Firebase zip download")
         }
 
+        tasks
+            .withType(org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink::class)
+            .filter { it.binary.outputKind == org.jetbrains.kotlin.gradle.plugin.mpp.NativeOutputKind.TEST }
+            .forEach { linkTask ->
+                linkTask.binary.apply {
+                    val testDeps = listOf(
+                        "FirebaseCore", "GoogleUtilities", "nanopb",
+                        "FirebaseAuth", "GTMSessionFetcher",
+                        "FirebaseFirestore", "abseil", "gRPC-C++", "gRPC-Core", "leveldb-library", "BoringSSL-GRPC",
+                        "FirebaseDatabase",
+                        "FirebaseFunctions"
+                    )
+
+                    val binaryPaths = listOf(
+                        "Firebase/FirebaseAnalytics",
+                        "Firebase/FirebaseAuth",
+                        "Firebase/FirebaseFirestore",
+                        "Firebase/FirebaseDatabase",
+                        "Firebase/FirebaseFunctions"
+                    )
+
+                    testDeps.forEach { linkerOpts("-framework", it) }
+                    binaryPaths.forEach { linkerOpts("-F${rootProject.buildDir}/$it") }
+
+                    linkerOpts("-ObjC")
+                }
+            }
 
         dependencies {
             "commonMainImplementation"(kotlin("stdlib-common"))

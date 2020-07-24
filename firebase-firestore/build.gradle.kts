@@ -4,6 +4,7 @@ plugins {
     id("com.android.library")
     kotlin("multiplatform")
     kotlin("native.cocoapods")
+    kotlin("plugin.serialization")
 }
 
 android {
@@ -16,6 +17,9 @@ android {
     sourceSets {
         getByName("main") {
             manifest.srcFile("src/androidMain/AndroidManifest.xml")
+        }
+        getByName("test") {
+            java.srcDirs("src/androidAndroidTest/kotlin")
         }
     }
     testOptions {
